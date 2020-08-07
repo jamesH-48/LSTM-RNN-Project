@@ -9,6 +9,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import MinMaxScaler
+from sklearn import metrics
+from sklearn.metrics import mean_squared_error
 
 '''
 Function Source:
@@ -94,12 +96,10 @@ print(rf_data.head())
 '''
 Train/Test Split Data
 ~ Total Time of Data Set is about 4 years
-~ Train on 1 year
-~ Test on 3 Years
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Change this for better results
 '''
 rf_values = rf_data.values
-train_time = 365*24
+# 80/20 Train/Test Split
+train_time = int(rf_values.shape[0] * .8)
 train_data = rf_values[:train_time, :]
 test_data = rf_values[train_time:, :]
 # In past programs we would use sklearn to train/test split.
@@ -121,13 +121,43 @@ LSTM Model
 '''
 # Create Model
 lstm_model = krs.Sequential()
-lstm_model.add(krs.layers.LSTM(80, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
+lstm_model.add(krs.layers.LSTM(100, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
 lstm_model.add(krs.layers.Dropout(.2))
-lstm_model.add(krs.layers.LSTM(40, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
-lstm_model.add(krs.layers.Dropout(.2))
-lstm_model.add(krs.layers.LSTM(40, return_sequences=False, input_shape=(x_train.shape[1], x_train.shape[2])))
+lstm_model.add(krs.layers.LSTM(100, return_sequences=False, input_shape=(x_train.shape[1], x_train.shape[2])))
 lstm_model.add(krs.layers.Dropout(.2))
 lstm_model.add(krs.layers.Dense(1))
 lstm_model.compile(loss='mae', optimizer='adam')
 lstm_model.summary()
 # Fit Model
+lstm_history = lstm_model.fit(x_train, y_train, epochs=25, batch_size=70, validation_data=(x_test,y_test), shuffle=False, verbose=2)
+# Plot Model History
+plt.plot(lstm_history.history['loss'], label='Train')
+plt.plot(lstm_history.history['val_loss'], label='Test')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+plt.show()
+
+# Execute Prediction
+yh = lstm_model.predict(x_test)
+x_test = x_test.reshape((x_test.shape[0], 7))
+# Must invert forecast scaling to initial scale
+inv_yh = np.concatenate((yh, x_test[:,-6:]), axis=1)
+inv_yh = scaler.inverse_transform(inv_yh)
+inv_yh = inv_yh[:,0]
+# Must invert actual data scaling
+y_test = y_test.reshape((len(y_test), 1))
+inv_y = np.concatenate((y_test, x_test[:,-6:]), axis=1)
+inv_y = scaler.inverse_transform(inv_y)
+inv_y = inv_y[:,0]
+
+# Calculate Error Values
+RMSE = np.sqrt(mean_squared_error(inv_y, inv_yh))
+print("Root Mean Squared Error: ", RMSE)
+# Plot Actual vs Predicted Graphs
+plt.plot(inv_y[:100], label = 'Actual')
+plt.plot(inv_yh[:100], label = 'Predicted')
+plt.xlabel('Time Steps', fontsize=20)
+plt.ylabel('Global Active Power', fontsize=20)
+plt.legend()
+plt.show()
