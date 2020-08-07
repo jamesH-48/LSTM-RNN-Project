@@ -1,13 +1,15 @@
 '''
 Packages:
-numpy, pandas, scikit-learn, seaborn, matplotlib, keras, dropbox
+numpy, pandas, scikit-learn, seaborn, matplotlib, tensorflow, keras
 '''
+import tensorflow as tf
+from tensorflow import keras as krs
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import MinMaxScaler
-import keras as krs
+
 '''
 Function Source:
 https://machinelearningmastery.com/convert-time-series-supervised-learning-problem-python/
