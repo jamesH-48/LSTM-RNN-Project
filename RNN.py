@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import MinMaxScaler
 from sklearn import metrics
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, r2_score
 
 '''
 Function Source:
@@ -99,7 +99,7 @@ Train/Test Split Data
 '''
 rf_values = rf_data.values
 # 80/20 Train/Test Split
-train_time = int(rf_values.shape[0] * .8)
+train_time = int(rf_values.shape[0] * .9)
 train_data = rf_values[:train_time, :]
 test_data = rf_values[train_time:, :]
 # In past programs we would use sklearn to train/test split.
@@ -122,14 +122,16 @@ LSTM Model
 # Create Model
 lstm_model = krs.Sequential()
 lstm_model.add(krs.layers.LSTM(100, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
+lstm_model.add(krs.layers.Dropout(.4))
+lstm_model.add(krs.layers.LSTM(80, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
 lstm_model.add(krs.layers.Dropout(.2))
-lstm_model.add(krs.layers.LSTM(100, return_sequences=False, input_shape=(x_train.shape[1], x_train.shape[2])))
+lstm_model.add(krs.layers.LSTM(50, return_sequences=False, input_shape=(x_train.shape[1], x_train.shape[2])))
 lstm_model.add(krs.layers.Dropout(.2))
-lstm_model.add(krs.layers.Dense(1))
-lstm_model.compile(loss='mae', optimizer='adam')
+lstm_model.add(krs.layers.Dense(units = 1))
+lstm_model.compile(loss='mean_squared_error', optimizer='adam')
 lstm_model.summary()
 # Fit Model
-lstm_history = lstm_model.fit(x_train, y_train, epochs=25, batch_size=70, validation_data=(x_test,y_test), shuffle=False, verbose=2)
+lstm_history = lstm_model.fit(x_train, y_train, epochs=30, batch_size=50, validation_data=(x_test,y_test), shuffle=False, verbose=2)
 # Plot Model History
 plt.plot(lstm_history.history['loss'], label='Train')
 plt.plot(lstm_history.history['val_loss'], label='Test')
@@ -137,8 +139,35 @@ plt.xlabel('Epoch')
 plt.ylabel('Loss')
 plt.legend()
 plt.show()
+#--------------------------------------------------------------------------
+# Execute Prediction for Train Data
+yh = lstm_model.predict(x_train)
+x_train = x_train.reshape((x_train.shape[0], 7))
+# Must invert forecast scaling to initial scale
+inv_yh = np.concatenate((yh, x_train[:,-6:]), axis=1)
+inv_yh = scaler.inverse_transform(inv_yh)
+inv_yh = inv_yh[:,0]
+# Must invert actual data scaling
+y_train = y_train.reshape((len(y_train), 1))
+inv_y = np.concatenate((y_train, x_train[:,-6:]), axis=1)
+inv_y = scaler.inverse_transform(inv_y)
+inv_y = inv_y[:,0]
 
-# Execute Prediction
+# Calculate Error Values for Train Data
+RMSE = np.sqrt(mean_squared_error(inv_y, inv_yh))
+R2 = r2_score(inv_y, inv_yh)
+print("Train Root Mean Squared Error: ", RMSE)
+print("Train R-Squared Value: ", R2)
+# Plot Actual vs Predicted Graphs for Test Data
+plt.plot(inv_y[:100], label = 'Actual')
+plt.plot(inv_yh[:100], label = 'Predicted')
+plt.xlabel('Time Steps', fontsize=20)
+plt.ylabel('Global Active Power', fontsize=20)
+plt.title('Train Data')
+plt.legend()
+plt.show()
+#--------------------------------------------------------------------------
+# Execute Prediction for Test Data
 yh = lstm_model.predict(x_test)
 x_test = x_test.reshape((x_test.shape[0], 7))
 # Must invert forecast scaling to initial scale
@@ -151,13 +180,16 @@ inv_y = np.concatenate((y_test, x_test[:,-6:]), axis=1)
 inv_y = scaler.inverse_transform(inv_y)
 inv_y = inv_y[:,0]
 
-# Calculate Error Values
+# Calculate Error Values for Test Data
 RMSE = np.sqrt(mean_squared_error(inv_y, inv_yh))
-print("Root Mean Squared Error: ", RMSE)
+R2 = r2_score(inv_y, inv_yh)
+print("Test Root Mean Squared Error: ", RMSE)
+print("Test R-Squared Value: ", R2)
 # Plot Actual vs Predicted Graphs
 plt.plot(inv_y[:100], label = 'Actual')
 plt.plot(inv_yh[:100], label = 'Predicted')
 plt.xlabel('Time Steps', fontsize=20)
 plt.ylabel('Global Active Power', fontsize=20)
 plt.legend()
+plt.title('Test Data')
 plt.show()
