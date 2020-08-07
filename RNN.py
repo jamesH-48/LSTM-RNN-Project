@@ -7,6 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import MinMaxScaler
+import keras as krs
 '''
 Function Source:
 https://machinelearningmastery.com/convert-time-series-supervised-learning-problem-python/
@@ -88,4 +89,43 @@ rf_data = series_to_supervised(sc_data, 1, 1)
 rf_data.drop(rf_data.columns[[8,9,10,11,12,13]], axis=1, inplace=True)
 print(rf_data.head())
 
-# Train/Test Split Data
+'''
+Train/Test Split Data
+~ Total Time of Data Set is about 4 years
+~ Train on 1 year
+~ Test on 3 Years
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Change this for better results
+'''
+rf_values = rf_data.values
+train_time = 365*24
+train_data = rf_values[:train_time, :]
+test_data = rf_values[train_time:, :]
+# In past programs we would use sklearn to train/test split.
+# But that would shift the rows for better learning in NNs.
+# So in this case we are using sequential data so let's keep it constant.
+x_train, y_train = train_data[:, :-1], train_data[:, -1]
+x_test, y_test = test_data[:, :-1], test_data[:, -1]
+'''
+~ LSTM Input must be three-dimensional
+~ Input: (Samples, Time Steps, Features)
+~ i.e. sample/batch size, size of sequence look-back, number of attributes describing each of the timesteps
+'''
+x_train = x_train.reshape((x_train.shape[0], 1, x_train.shape[1]))
+x_test = x_test.reshape((x_test.shape[0], 1, x_test.shape[1]))
+print(x_train.shape, y_train.shape, x_test.shape, y_test.shape)
+
+'''
+LSTM Model
+'''
+# Create Model
+lstm_model = krs.Sequential()
+lstm_model.add(krs.layers.LSTM(80, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
+lstm_model.add(krs.layers.Dropout(.2))
+lstm_model.add(krs.layers.LSTM(40, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
+lstm_model.add(krs.layers.Dropout(.2))
+lstm_model.add(krs.layers.LSTM(40, return_sequences=False, input_shape=(x_train.shape[1], x_train.shape[2])))
+lstm_model.add(krs.layers.Dropout(.2))
+lstm_model.add(krs.layers.Dense(1))
+lstm_model.compile(loss='mae', optimizer='adam')
+lstm_model.summary()
+# Fit Model
