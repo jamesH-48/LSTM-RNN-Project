@@ -15,8 +15,9 @@ from sklearn.metrics import mean_squared_error, r2_score
 '''
 Function Source:
 https://machinelearningmastery.com/convert-time-series-supervised-learning-problem-python/
+~ This could be interpreted as a library feature that helps with ease of use for the model.
 '''
-def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
+def series_to_supervised(data, n_in=1, n_out=1, drop_nan=True):
     '''
     Alter a time series dataset to be a supervised learning dataset
     :param data: Sequential Dataset
@@ -27,23 +28,23 @@ def series_to_supervised(data, n_in=1, n_out=1, dropnan=True):
     '''
     n_vars = 1 if type(data) is list else data.shape[1]
     df = pd.DataFrame(data)
-    cols, names = list(), list()
+    cols, tags = list(), list()
     # Input Sequence ((t-n),...,(t-1))
     for i in range(n_in, 0, -1):
         cols.append(df.shift(i))
-        names += [('var%d(t-%d)' % (j+1, i)) for j in range (n_vars)]
+        tags += [('var%d(t-%d)' % (j+1, i)) for j in range (n_vars)]
     # Output/Forecast Sequence ((t),...,(t+n))
     for i in range(0, n_out):
         cols.append(df.shift(-i))
         if i == 0:
-            names += [('var%d(t)' % (j+1)) for j in range(n_vars)]
+            tags += [('var%d(t)' % (j+1)) for j in range(n_vars)]
         else:
-            names += [('var%d(t+%d)' % (j+1, i)) for j in range(n_vars)]
+            tags += [('var%d(t+%d)' % (j+1, i)) for j in range(n_vars)]
     # Concatenate Together
     final_df = pd.concat(cols, axis=1)
-    final_df.columns = names
+    final_df.columns = tags
     # Drop rows that contain NaN values given boolean parameter
-    if dropnan:
+    if drop_nan:
         final_df.dropna(inplace=True)
     return final_df
 
@@ -52,13 +53,13 @@ def process_data():
     df = pd.read_csv('https://utdallas.box.com/shared/static/7fb4zb0c53hiy500gxazeykpdecer361.txt',sep=';',\
                      parse_dates = {'date' : ['Date', 'Time']}, infer_datetime_format = True, na_values = ['nan','?'],\
                      index_col = 'date')
-    print(df.head())
-    print(df.info())
+    #print(df.head())
+    #print(df.info())
 
     # Replace all NaN values with the mean value for that column
     # Might want to do this after split for each set
     df = df.fillna(df.mean())
-    print(df.isnull().sum())
+    #print(df.isnull().sum())
 
     # Graph resampling over the day for sum for each attribute
     i = 1
@@ -69,14 +70,14 @@ def process_data():
         i += 1
     plt.show()
     # Graph Correlation Heat Map between attributes
-    corr = df.resample('M').sum().corr(method = "spearman")
+    corr = df.resample('D').sum().corr(method = "spearman")
     axHeat1 = plt.axes()
     axi1 = sns.heatmap(corr, ax = axHeat1, cmap="BuPu", annot=True)
     axHeat1.set_title('Heatmap of Attribute Correlation', fontsize = 24)
     plt.show()
 
     '''
-    Resampling Data over the day for sum
+    Resampling Data over the hour for sum
     ~ this can be changed to see different results
         ~ such as hour, day, month, etc. or sum, mean, etc.
     '''
@@ -91,17 +92,17 @@ def process_data():
     # For this program/project we are predicting the Global Active Power
     # So we will drop the last Observation Columns we don't wish to predict
     rf_data.drop(rf_data.columns[[8,9,10,11,12,13]], axis=1, inplace=True)
-    print(rf_data.head())
+    #print(rf_data.head())
     return rf_data, scaler
 
-def LSTM_Model(rf_data, scaler):
+def LSTM_Model(rf_data, scaler, split):
     '''
     Train/Test Split Data
     ~ Total Time of Data Set is about 4 years
     '''
     rf_values = rf_data.values
     # 80/20 Train/Test Split
-    train_time = int(rf_values.shape[0] * .9)
+    train_time = int(rf_values.shape[0] * split)
     train_data = rf_values[:train_time, :]
     test_data = rf_values[train_time:, :]
     # In past programs we would use sklearn to train/test split.
@@ -117,15 +118,15 @@ def LSTM_Model(rf_data, scaler):
     x_train = x_train.reshape((x_train.shape[0], 1, x_train.shape[1]))
     x_test = x_test.reshape((x_test.shape[0], 1, x_test.shape[1]))
     print(x_train.shape, y_train.shape, x_test.shape, y_test.shape)
-    
+
     '''
     LSTM Model
     '''
     # Create Model
     lstm_model = krs.Sequential()
-    lstm_model.add(krs.layers.LSTM(100, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
+    lstm_model.add(krs.layers.LSTM(150, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
     lstm_model.add(krs.layers.Dropout(.2))
-    lstm_model.add(krs.layers.LSTM(80, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
+    lstm_model.add(krs.layers.LSTM(100, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
     lstm_model.add(krs.layers.Dropout(.2))
     lstm_model.add(krs.layers.LSTM(80, return_sequences=False, input_shape=(x_train.shape[1], x_train.shape[2])))
     lstm_model.add(krs.layers.Dropout(.2))
@@ -133,7 +134,7 @@ def LSTM_Model(rf_data, scaler):
     lstm_model.compile(loss='mean_squared_error', optimizer='adam')
     lstm_model.summary()
     # Fit Model
-    lstm_history = lstm_model.fit(x_train, y_train, epochs=50, batch_size=50, validation_data=(x_test,y_test), shuffle=False, verbose=2)
+    lstm_history = lstm_model.fit(x_train, y_train, epochs=5, batch_size=50, validation_data=(x_test,y_test), shuffle=False, verbose=2)
     # Plot Model History
     plt.plot(lstm_history.history['loss'], label='Train')
     plt.plot(lstm_history.history['val_loss'], label='Test')
@@ -141,6 +142,10 @@ def LSTM_Model(rf_data, scaler):
     plt.ylabel('Loss')
     plt.legend()
     plt.show()
+
+    '''
+    Results Print Out for Tabular Report
+    '''
     #--------------------------------------------------------------------------
     # Execute Prediction for Train Data
     yh = lstm_model.predict(x_train)
@@ -154,13 +159,14 @@ def LSTM_Model(rf_data, scaler):
     inv_y = np.concatenate((y_train, x_train[:,-6:]), axis=1)
     inv_y = scaler.inverse_transform(inv_y)
     inv_y = inv_y[:,0]
-    
+
     # Calculate Error Values for Train Data
     RMSE = np.sqrt(mean_squared_error(inv_y, inv_yh))
     R2 = r2_score(inv_y, inv_yh)
     print("Train Root Mean Squared Error: ", RMSE)
     print("Train R-Squared Value: ", R2)
-    # Plot Actual vs Predicted Graphs for Test Data
+    # Plot Actual vs Predicted Graphs for Train Data
+    # For first 100 time-steps
     plt.plot(inv_y[:100], label = 'Actual')
     plt.plot(inv_yh[:100], label = 'Predicted')
     plt.xlabel('Time Steps', fontsize=20)
@@ -181,13 +187,14 @@ def LSTM_Model(rf_data, scaler):
     inv_y = np.concatenate((y_test, x_test[:,-6:]), axis=1)
     inv_y = scaler.inverse_transform(inv_y)
     inv_y = inv_y[:,0]
-    
+
     # Calculate Error Values for Test Data
     RMSE = np.sqrt(mean_squared_error(inv_y, inv_yh))
     R2 = r2_score(inv_y, inv_yh)
     print("Test Root Mean Squared Error: ", RMSE)
     print("Test R-Squared Value: ", R2)
-    # Plot Actual vs Predicted Graphs
+    # Plot Actual vs Predicted Graphs for Test Data
+    # For first 100 time-steps
     plt.plot(inv_y[:100], label = 'Actual')
     plt.plot(inv_yh[:100], label = 'Predicted')
     plt.xlabel('Time Steps', fontsize=20)
@@ -206,9 +213,11 @@ if __name__ == "__main__":
     ~ Resample, Normalize, and Reframe Data (to become supervised)
     '''
     rf_data, scaler = process_data()
-    
+
     '''
     Create, Train, and Test Model
     ~ Runs Train/Test Data through Model for results
     '''
-    LSTM_Model(rf_data, scaler)
+    # Train/Test Split (.9 ~= 90/10)
+    split = .9
+    LSTM_Model(rf_data, scaler, split)
