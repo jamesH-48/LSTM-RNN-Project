@@ -236,7 +236,9 @@ if __name__ == "__main__":
     # If true then all attributes will be used
     # If false the determined attributes to be dropped will be dropped
     all_atr = False
-    print_data_graphs = False
+    # If true print the attribute comparison and heatmap graphs
+    # If false go straight to the epochs
+    print_data_graphs = True
     rf_data, scaler = process_data(all_atr, print_data_graphs)
 
     '''
