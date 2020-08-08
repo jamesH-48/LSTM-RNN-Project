@@ -146,15 +146,15 @@ def LSTM_Model(rf_data, scaler, split):
     '''
     # Create Model
     lstm_model = krs.Sequential()
-    lstm_model.add(krs.layers.LSTM(100, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
+    lstm_model.add(krs.layers.LSTM(70, return_sequences=True, input_shape=(x_train.shape[1], x_train.shape[2])))
     lstm_model.add(krs.layers.Dropout(.2))
-    lstm_model.add(krs.layers.LSTM(80, return_sequences=False, input_shape=(x_train.shape[1], x_train.shape[2])))
+    lstm_model.add(krs.layers.LSTM(40, return_sequences=False, input_shape=(x_train.shape[1], x_train.shape[2])))
     lstm_model.add(krs.layers.Dropout(.2))
     lstm_model.add(krs.layers.Dense(units = 1))
     lstm_model.compile(loss='mean_squared_error', optimizer='adam')
     lstm_model.summary()
     # Fit Model
-    lstm_history = lstm_model.fit(x_train, y_train, epochs=20, batch_size=50, validation_data=(x_test,y_test), shuffle=False, verbose=2)
+    lstm_history = lstm_model.fit(x_train, y_train, epochs=50, batch_size=50, validation_data=(x_test,y_test), shuffle=False, verbose=2)
     # Plot Model History
     plt.plot(lstm_history.history['loss'], label='Train')
     plt.plot(lstm_history.history['val_loss'], label='Test')
@@ -187,8 +187,8 @@ def LSTM_Model(rf_data, scaler, split):
     print("Train R-Squared Value: ", R2)
     # Plot Actual vs Predicted Graphs for Train Data
     # For first 100 time-steps
-    plt.plot(inv_y[:100], label = 'Actual')
-    plt.plot(inv_yh[:100], label = 'Predicted')
+    plt.plot(inv_y[:300], label = 'Actual')
+    plt.plot(inv_yh[:300], label = 'Predicted')
     plt.xlabel('Time Steps', fontsize=20)
     plt.ylabel('Global Active Power', fontsize=20)
     plt.title('Train Data')
@@ -215,8 +215,8 @@ def LSTM_Model(rf_data, scaler, split):
     print("Test R-Squared Value: ", R2)
     # Plot Actual vs Predicted Graphs for Test Data
     # For first 100 time-steps
-    plt.plot(inv_y[:100], label = 'Actual')
-    plt.plot(inv_yh[:100], label = 'Predicted')
+    plt.plot(inv_y[:300], label = 'Actual')
+    plt.plot(inv_yh[:300], label = 'Predicted')
     plt.xlabel('Time Steps', fontsize=20)
     plt.ylabel('Global Active Power', fontsize=20)
     plt.legend()
