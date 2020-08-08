@@ -48,7 +48,7 @@ def series_to_supervised(data, n_in=1, n_out=1, drop_nan=True):
         final_df.dropna(inplace=True)
     return final_df
 
-def process_data(all_atr):
+def process_data(all_atr, print_data_graphs):
     # Long line to grab data, combine date & time to be the index, and set nan values to recognize '?'
     df = pd.read_csv('https://utdallas.box.com/shared/static/7fb4zb0c53hiy500gxazeykpdecer361.txt',sep=';',\
                      parse_dates = {'date' : ['Date', 'Time']}, infer_datetime_format = True, na_values = ['nan','?'],\
@@ -61,20 +61,21 @@ def process_data(all_atr):
     df = df.fillna(df.mean())
     #print(df.isnull().sum())
 
-    # Graph resampling over the day for sum for each attribute
-    i = 1
-    for column in df:
-        plt.subplot(7, 1, i)
-        df[column].resample('D').sum().plot(color = 'black')
-        plt.title(column, y=.5, loc='right')
-        i += 1
-    plt.show()
-    # Graph Correlation Heat Map between attributes
-    corr = df.resample('D').sum().corr(method = "spearman")
-    axHeat1 = plt.axes()
-    axi1 = sns.heatmap(corr, ax = axHeat1, cmap="BuPu", annot=True)
-    axHeat1.set_title('Heatmap of Attribute Correlation', fontsize = 24)
-    plt.show()
+    if print_data_graphs == True:
+        # Graph resampling over the day for sum for each attribute
+        i = 1
+        for column in df:
+            plt.subplot(7, 1, i)
+            df[column].resample('D').sum().plot(color = 'black')
+            plt.title(column, y=.5, loc='right')
+            i += 1
+        plt.show()
+        # Graph Correlation Heat Map between attributes
+        corr = df.resample('D').sum().corr(method = "spearman")
+        axHeat1 = plt.axes()
+        axi1 = sns.heatmap(corr, ax = axHeat1, cmap="BuPu", annot=True)
+        axHeat1.set_title('Heatmap of Attribute Correlation', fontsize = 24)
+        plt.show()
 
     '''
     # Drop Columns that may help results
@@ -108,9 +109,11 @@ def process_data(all_atr):
     '''
     if all_atr == True:
         rf_data.drop(rf_data.columns[[8, 9, 10, 11, 12, 13]], axis=1, inplace=True)
+        # print("rf:", rf_data.shape)
     if all_atr == False:
         # We took off two input attributes so we take off two less output attributes that we aren't predicting
         rf_data.drop(rf_data.columns[[6, 7, 8, 9]], axis=1, inplace=True)
+        # print("rf", rf_data.shape)
     #print(rf_data.head())
     return rf_data, scaler
 
@@ -233,7 +236,8 @@ if __name__ == "__main__":
     # If true then all attributes will be used
     # If false the determined attributes to be dropped will be dropped
     all_atr = False
-    rf_data, scaler = process_data(all_atr)
+    print_data_graphs = False
+    rf_data, scaler = process_data(all_atr, print_data_graphs)
 
     '''
     Create, Train, and Test Model
