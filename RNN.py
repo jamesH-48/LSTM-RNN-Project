@@ -90,7 +90,7 @@ def process_data(all_atr, print_data_graphs):
     ~ this can be changed to see different results
         ~ such as hour, day, month, etc. or sum, mean, etc.
     '''
-    res_df = df.resample('h').sum()
+    res_df = df.resample('h').mean()
     print(res_df.shape)
     data_values = res_df.values
     # Normalize Attributes
@@ -169,7 +169,6 @@ def LSTM_Model(rf_data, scaler, split):
     #--------------------------------------------------------------------------
     # Execute Prediction for Train Data
     yh = lstm_model.predict(x_train)
-    print("adsd",x_train.shape[2])
     x_train = x_train.reshape((x_train.shape[0], x_train.shape[2]))
     # Must invert forecast scaling to initial scale
     inv_yh = np.concatenate((yh, x_train[:,1:]), axis=1)
@@ -238,7 +237,7 @@ if __name__ == "__main__":
     all_atr = False
     # If true print the attribute comparison and heatmap graphs
     # If false go straight to the epochs
-    print_data_graphs = True
+    print_data_graphs = False
     rf_data, scaler = process_data(all_atr, print_data_graphs)
 
     '''
