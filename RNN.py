@@ -48,7 +48,7 @@ def series_to_supervised(data, n_in=1, n_out=1, drop_nan=True):
         final_df.dropna(inplace=True)
     return final_df
 
-def process_data():
+def process_data(all_atr):
     # Long line to grab data, combine date & time to be the index, and set nan values to recognize '?'
     df = pd.read_csv('https://utdallas.box.com/shared/static/7fb4zb0c53hiy500gxazeykpdecer361.txt',sep=';',\
                      parse_dates = {'date' : ['Date', 'Time']}, infer_datetime_format = True, na_values = ['nan','?'],\
@@ -81,7 +81,8 @@ def process_data():
     # Voltage: Not enough information / variation
     # Global Active Power and Intensity very linear
     '''
-    #df.drop(columns=['Voltage', 'Global_intensity'])
+    if all_atr == False:
+        df = df.drop(columns=['Voltage', 'Global_intensity'])
 
     '''
     Resampling Data over the hour for sum
@@ -98,7 +99,18 @@ def process_data():
     rf_data = series_to_supervised(sc_data, 1, 1)
     # For this program/project we are predicting the Global Active Power
     # So we will drop the last Observation Columns we don't wish to predict
-    rf_data.drop(rf_data.columns[[8,9,10,11,12,13]], axis=1, inplace=True)
+    '''
+    Attributes Input|Output: 1 2 3 4 5 6 7 | 1 2 3 4 5 6 7
+                Array Index: 0 1 2 3 4 5 6 | 7 [8 9 10 11 12 13] 
+    -----------------------------------------------
+    Attributes Input|Output: 1 2 3 4 5 | 1 2 3 4 5 
+                Array Index: 0 1 2 3 4 | 5 [6 7 8 9]
+    '''
+    if all_atr == True:
+        rf_data.drop(rf_data.columns[[8, 9, 10, 11, 12, 13]], axis=1, inplace=True)
+    if all_atr == False:
+        # We took off two input attributes so we take off two less output attributes that we aren't predicting
+        rf_data.drop(rf_data.columns[[6, 7, 8, 9]], axis=1, inplace=True)
     #print(rf_data.head())
     return rf_data, scaler
 
@@ -218,7 +230,10 @@ if __name__ == "__main__":
     ~ Plot Data to see trends (attributes vs time-steps, heatmap)
     ~ Resample, Normalize, and Reframe Data (to become supervised)
     '''
-    rf_data, scaler = process_data()
+    # If true then all attributes will be used
+    # If false the determined attributes to be dropped will be dropped
+    all_atr = False
+    rf_data, scaler = process_data(all_atr)
 
     '''
     Create, Train, and Test Model
