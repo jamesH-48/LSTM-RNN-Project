@@ -2,14 +2,12 @@
 Packages:
 numpy, pandas, scikit-learn, seaborn, matplotlib, tensorflow, keras
 '''
-import tensorflow as tf
 from tensorflow import keras as krs
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import MinMaxScaler
-from sklearn import metrics
 from sklearn.metrics import mean_squared_error, r2_score
 
 def series_to_supervised(data, all_atr):
@@ -41,8 +39,8 @@ def series_to_supervised(data, all_atr):
 
 def process_data(all_atr, print_data_graphs):
     # Long line to grab data, combine date & time to be the index, and set nan values to recognize '?'
-    df = pd.read_csv('https://utdallas.box.com/shared/static/7fb4zb0c53hiy500gxazeykpdecer361.txt',sep=';',\
-                     parse_dates = {'date' : ['Date', 'Time']}, infer_datetime_format = True, na_values = ['nan','?'],\
+    df = pd.read_csv('https://utdallas.box.com/shared/static/7fb4zb0c53hiy500gxazeykpdecer361.txt',sep=';',
+                     parse_dates = {'date' : ['Date', 'Time']}, infer_datetime_format = True, na_values = ['nan','?'],
                      index_col = 'date')
     #print(df.head())
     #print(df.info())
